@@ -1,0 +1,274 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+struct Person{
+	char name[100];
+	int age;
+	int height;
+	char ID[100];
+	
+	Person* left, *right;
+}*root;
+
+Person* createNode(char name[], int age, char ID[]){
+	Person* temp = (Person*)malloc(sizeof(Person));
+	
+	strcpy(temp->name, name);
+	strcpy(temp->ID, ID);
+	temp->age = age;
+	temp->height = 1;
+	temp->left = temp->right = NULL;
+	
+	return temp;
+}
+
+int getHeight(Person* root){
+	if(root == NULL){ 
+		return 0;
+	}
+	return root->height;
+}
+
+int getMax(int num1, int num2){
+	if(num1 > num2){
+		return num1;
+	}
+	return num2;
+}
+int getBF(Person* root){
+	if(root == NULL){
+		return 0;
+	}
+	return getHeight(root->left) - getHeight(root->right);
+}
+
+Person* rightRotation(Person *root){
+	Person* left = root->left;
+	Person* leftRight = left->right;
+	
+	left->right = root;
+	root->left = leftRight;
+	
+	root->height = 1 + getMax(getHeight(root->left), getHeight(root->right));
+	
+	left->height = 1 + getMax(getHeight(left->left), getHeight(left->right));
+	
+	return left;
+}
+
+Person* leftRotation(Person* root){
+	Person* right = root->right;
+	Person* rightleft = right->left;
+	
+	right->left = root;
+	root->right = rightleft;
+	
+	root->height = 1 + getMax(getHeight(root->left), getHeight(root->right));
+	
+	right->height = 1 + getMax(getHeight(right->left), getHeight(right->right));
+	
+	return right;
+	
+}
+Person* balance(Person* root){
+	if(root == NULL){
+		return 0;
+	}
+	//update height
+	root->height = 1 + getMax(getHeight(root->left), getHeight(root->right));
+	//liat balance faktor
+	int BF = getBF(root);
+	//validasi
+	if(BF > 1 && getBF(root->left) >= 0){
+		//LL Case
+		return rightRotation(root);
+	}else if(BF > 1 && getBF(root->left) < 0){
+		//LR Case
+		root->left = leftRotation(root->left);
+		
+		return rightRotation(root);
+	}else if(BF < -1 && getBF(root->right) <= 0){
+		//RR Case
+		return leftRotation(root);
+	}else if(BF < -1 && getBF(root->right) > 0){
+		//RL Case
+		root->right = rightRotation(root->right);
+		
+		return leftRotation(root);
+	}
+	return root;
+}
+Person* insertAVL(Person* root, char name[], int age, char ID[]){
+	if(root == NULL){
+		return createNode(name, age, ID);
+	}else if(strcmp(root->ID,ID) > 0){
+		root->left = insertAVL(root->left, name, age, ID);
+	}else if(strcmp(root->ID,ID) < 0){
+		root->right = insertAVL(root->right, name, age, ID);
+	}
+	
+	return balance(root);
+}
+void preOrder(Person* root){
+	if(root == NULL){
+		return;
+	}else{
+		printf("%s %d %d\n", root->name, root->age, root->height, root->ID);
+		preOrder(root->left);
+		preOrder(root->right);
+	}
+}
+void inOrder(Person *root){
+	if(root == NULL){
+		return;
+	}else{
+		inOrder(root->left);
+		printf("%s %d %d %s \n", root->name, root->age, root->height, root->ID);
+		inOrder(root->right);
+	}
+}
+
+void postOrder(Person *root){
+	if(root == NULL){
+		return;
+	}else{
+		postOrder(root->left);
+		postOrder(root->right);
+		printf("%s %d %d %s\n", root->name, root->age, root->height, root->ID);
+	}
+}
+Person* deleteAVL(Person* root, char ID[]){
+	
+	if(root == NULL){
+		return root;
+	}else if(strcmp(root->ID,ID) > 0){
+		root->left = deleteAVL(root->left, ID);
+	}else if(strcmp(root->ID,ID) < 0){
+		root->right = deleteAVL(root->right, ID);
+	}else{
+		//pas ada datanya
+		if(root->left == NULL && root->right == NULL){
+			//no child
+			free(root);
+			root = NULL;
+		}else if(root->left == NULL || root->right == NULL){
+			//1 child
+			Person* temp = root->left != NULL ? root->left : root->right;
+			free(root);
+			root = temp;
+		}else{
+			// 2 child
+			
+			/* successor (bagian kanan paling muda)
+			Person* temp = root->right;
+			while(temp->left != NULL){
+				temp = temp->left;
+			}
+			//abis itu copy value
+			root->age = temp->age;
+			strcpy(root->name, temp->name);
+			
+			root->right = deleteAVL(root->right, temp->age);
+			*/
+//			predessesor(bagian kiri paling tua)
+			Person* temp = root->left;
+			while(temp->right != NULL){
+				temp = temp->right;
+			}
+			//copy valuenya(yang ada di struct)
+			strcpy(root->name, temp->name);
+			root->age = temp->age;
+			
+			//apus bagian kiri
+			root->left = deleteAVL(root->left, temp->ID);
+			
+			
+		}
+	}
+	return balance(root);
+}
+
+Person* searchAVL(Person* root, int ageSearch){
+	
+	if(root == NULL){
+		return root;
+	}else if(root->age > ageSearch){
+		searchAVL(root->left, ageSearch);
+	}else if(root->age < ageSearch){
+		searchAVL(root->right, ageSearch);
+	}else{
+		//kalau match
+		return root;
+	}
+	
+}
+
+Person* updateAVL(Person* root, int ageSearch, char nameUpdate[]){
+	
+	if(root == NULL){
+		return root;
+	}else if(root->age > ageSearch){
+		updateAVL(root->left, ageSearch, nameUpdate);
+	}else if(root->age < ageSearch){
+		updateAVL(root->right, ageSearch, nameUpdate);
+	}else{
+		//kalau match
+		strcpy(root->name, nameUpdate);
+	}
+	
+}
+char uppercase(char input[]){
+    for(int i=0; i<strlen(input); i++)
+    {
+        if (input[i] >= 'a' && input[i] <= 'z') {
+            input[i] = input[i] - 32;
+        }
+    }
+}
+void babi()
+{
+    char dogSize[100], dogSizeS[100];
+    int dogId = 1;
+    char dogBreed[100];
+    int g = 1;
+    
+    char tampung[100];
+    
+    for(int i = 0; i < 2; i++){
+        while(g == 1){
+            scanf("%s", dogSize);
+            if(strcmp(dogSize, "Small") == 0 || strcmp(dogSize, "Medium") == 0 || strcmp(dogSize, "Large") == 0)
+            {
+                break;
+            }
+        }
+        scanf("%s", dogBreed);
+        uppercase(dogSize);
+        uppercase(dogBreed);        
+        sprintf(tampung, "%c%c%03i%c", dogSize[0], dogSize[1], dogId, dogBreed[0]);
+        dogId++;
+        
+        printf("%s\n\n", tampung);
+    }
+    
+}
+int main () {
+	
+	root = insertAVL(root, "Erwin", ID);
+	
+	root = insertAVL(root, "Jose", 12);
+	root = insertAVL(root, "Bambang", 15);
+	updateAVL(root, 12, "Devani");
+	root = insertAVL(root, "Joni", 20);
+	root = deleteAVL(root, 15);
+	inOrder(root);
+	puts("inOrder\n\n");
+	preOrder(root);
+	puts("preOrder\n\n");
+	postOrder(root);
+	puts("postOrder\n\n");
+	
+
+return 0;
+}
